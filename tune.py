@@ -16,25 +16,26 @@ config = None
 
 def create_optimizer(trial):
     kwargs = {}
-    optimizer_options = ['Adam', 'SGD']
+    optimizer_options = ['Adam', 'RMSprop', 'SGD']
     optimizer_selected = trial.suggest_categorical("optimizer", optimizer_options)
     if optimizer_selected == "Adam":
-        kwargs["learning_rate"] = trial.suggest_float("adam_learning_rate", 1e-9, 1e-3)
-        kwargs["beta_1"] = trial.suggest_float("beta1", 0.9, 0.999)
-        kwargs["beta_2"] = trial.suggest_float("beta2", 0.99, 0.9999)
-        kwargs["epsilon"] = trial.suggest_float("epsilon", 1e-9, 1e-5)
+        kwargs["learning_rate"] = trial.suggest_float("adam_learning_rate", 1e-5, 1e-2)
+        kwargs["beta_1"] = trial.suggest_float("beta1", 0.9, 0.9999)
+        kwargs["beta_2"] = trial.suggest_float("beta2", 0.9, 0.9999)
+        kwargs["epsilon"] = trial.suggest_float("epsilon", 1e-9, 1)
     elif optimizer_selected == "RMSprop":
         kwargs["learning_rate"] = trial.suggest_float(
-            "rms_learning_rate", 1e-7, 1e-3
+            "rms_learning_rate", 1e-7, 1e-2
         )
-        kwargs["decay"] = trial.suggest_float("rms_decay", 0.8, 0.999)
-        kwargs["epsilon"] = trial.suggest_float("rms_epsilon", 1e-11, 1e-7)
+        kwargs["decay"] = trial.suggest_float("rms_decay", 0.8, 0.9999)
+        kwargs["epsilon"] = trial.suggest_float("rms_epsilon", 1e-12, 1e-7)
         kwargs["momentum"] = trial.suggest_float("rms_momentum", 0, 1e-1)
     elif optimizer_selected == "SGD":
         kwargs["learning_rate"] = trial.suggest_float(
-            "sgd_opt_learning_rate", 1e-9, 1e-3
+            "sgd_opt_learning_rate", 1e-9, 1e-1
         )
         kwargs["momentum"] = trial.suggest_float("sgd_opt_momentum", 1e-5, 1e-1)
+        kwargs["nesterov"] = trial.suggest_categorical('sgd_nosterov', [True, False])
     else:
         assert False, "ERROR: Got {} as optimizer".format(optimizer_selected)
     
@@ -44,9 +45,7 @@ def create_optimizer(trial):
 
 def objective(trial):
     clear_session()
-    #lr = trial.suggest_loguniform('lr', 1e-6, 1e-1)
-    #batch_size = trial.suggest_categorical('batch_size', [2,3,4])
-    batch_size = 4
+    batch_size = trial.suggest_categorical("batch_size", [2,3,4])
     optimizer, lr = create_optimizer(trial)
 
     result_path = "studies"
@@ -132,6 +131,8 @@ def objective(trial):
         optimizer=optimizer
     )
 
+    epochs = config['train']['nb_epochs'] + config['train']['warmup_epochs']
+
     target_weight = log_dir + config['train']['saved_weights_name']
     tb_dir = log_dir + config['train']['tensorboard_dir']
     callbacks = create_callbacks(target_weight, tb_dir, infer_model)
@@ -140,18 +141,20 @@ def objective(trial):
             trial=trial,
             monitor='loss'
         ),
-        TqdmCallback()
+        TqdmCallback(epochs=epochs, batch_size=batch_size)
     ]
-
+    
     history = train_model.fit_generator(
         generator        = train_generator, 
         steps_per_epoch  = len(train_generator) * config['train']['train_times'], 
-        epochs           = config['train']['nb_epochs'] + config['train']['warmup_epochs'], 
+        epochs           = epochs, 
         verbose          = 2 if config['train']['debug'] else 1,
         callbacks        = callbacks, 
         workers          = 1,
         max_queue_size   = 8
     )
+
+    print(f"Study: {log_dir}")
     for key in history.history.keys():
         print(key, '->', history.history[key])
 
@@ -168,7 +171,7 @@ def _main_(args):
         storage = "sqlite:///" + study_name + ".db",
         load_if_exists = True
     )
-    study.optimize(objective, n_trials=2, timeout=600)
+    study.optimize(objective, n_trials=10, timeout=600)
 
     pruned_trials = [t for t in study.trials if t.state == optuna.trial.TrialState.PRUNED]
     complete_trials = [t for t in study.trials if t.state == optuna.trial.TrialState.COMPLETE]

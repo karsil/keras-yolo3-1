@@ -75,13 +75,13 @@ def create_training_instances(
 def create_callbacks(saved_weights_name, tensorboard_logs, model_to_save):
     makedirs(tensorboard_logs)
     
-    #early_stop = EarlyStopping(
-    #    monitor     = 'loss', 
-    #    min_delta   = 0.01, 
-    #    patience    = 7, 
-    #    mode        = 'min', 
-    #    verbose     = 1
-    #)
+    early_stop = EarlyStopping(
+        monitor     = 'loss', 
+        min_delta   = 0.01, 
+        patience    = 7, 
+        mode        = 'min', 
+        verbose     = 1
+    )
     checkpoint = CustomModelCheckpoint(
         model_to_save   = model_to_save,
         filepath        = saved_weights_name,# + '{epoch:02d}.h5', 
@@ -94,7 +94,7 @@ def create_callbacks(saved_weights_name, tensorboard_logs, model_to_save):
     reduce_on_plateau = ReduceLROnPlateau(
         monitor  = 'loss',
         factor   = 0.1,
-        patience = 2,
+        patience = 3,
         verbose  = 1,
         mode     = 'min',
         epsilon  = 0.01,
@@ -106,7 +106,7 @@ def create_callbacks(saved_weights_name, tensorboard_logs, model_to_save):
         write_graph            = True,
         write_images           = True,
     )    
-    return [checkpoint, reduce_on_plateau, tensorboard]
+    return [early_stop, checkpoint, reduce_on_plateau, tensorboard]
 
 def create_model(
     nb_class, 
