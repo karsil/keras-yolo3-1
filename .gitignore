@@ -7,3 +7,8 @@
 *.mp4
 *.DS_Store
 *.bak
+
+.vscode/
+*.db
+*.pkl
+studies/
