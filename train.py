@@ -106,7 +106,10 @@ def create_callbacks(saved_weights_name, tensorboard_logs, model_to_save):
         write_graph            = True,
         write_images           = True,
     )    
-    return [early_stop, checkpoint, reduce_on_plateau, tensorboard]
+
+    nan_cb = tf.keras.callbacks.TerminateOnNaN()
+
+    return [early_stop, checkpoint, reduce_on_plateau, tensorboard, nan_cb]
 
 def create_model(
     nb_class, 
