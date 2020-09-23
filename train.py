@@ -33,6 +33,7 @@ def create_training_instances(
     valid_image_folder,
     valid_cache,
     labels,
+    train_val_split
 ):
     # parse annotations of the training set
     train_ints, train_labels = parse_voc_annotation(train_annot_folder, train_image_folder, train_cache, labels)
@@ -43,7 +44,7 @@ def create_training_instances(
     else:
         print("valid_annot_folder not exists. Spliting the trainining set.")
 
-        train_valid_split = int(0.8*len(train_ints))
+        train_valid_split = int(train_val_split * len(train_ints))
         np.random.seed(0)
         np.random.shuffle(train_ints)
         np.random.seed()
@@ -74,13 +75,13 @@ def create_training_instances(
 def create_callbacks(saved_weights_name, tensorboard_logs, model_to_save):
     makedirs(tensorboard_logs)
     
-    early_stop = EarlyStopping(
-        monitor     = 'loss', 
-        min_delta   = 0.01, 
-        patience    = 7, 
-        mode        = 'min', 
-        verbose     = 1
-    )
+    #early_stop = EarlyStopping(
+    #    monitor     = 'loss', 
+    #    min_delta   = 0.01, 
+    #    patience    = 7, 
+    #    mode        = 'min', 
+    #    verbose     = 1
+    #)
     checkpoint = CustomModelCheckpoint(
         model_to_save   = model_to_save,
         filepath        = saved_weights_name,# + '{epoch:02d}.h5', 
@@ -105,7 +106,7 @@ def create_callbacks(saved_weights_name, tensorboard_logs, model_to_save):
         write_graph            = True,
         write_images           = True,
     )    
-    return [early_stop, checkpoint, reduce_on_plateau, tensorboard]
+    return [checkpoint, reduce_on_plateau, tensorboard]
 
 def create_model(
     nb_class, 
@@ -121,7 +122,8 @@ def create_model(
     obj_scale,
     noobj_scale,
     xywh_scale,
-    class_scale  
+    class_scale,
+    optimizer = None
 ):
     if multi_gpu > 1:
         with tf.device('/cpu:0'):
@@ -167,7 +169,8 @@ def create_model(
     else:
         train_model = template_model      
 
-    optimizer = Adam(lr=lr, clipnorm=0.001)
+    if not optimizer:
+        optimizer = Adam(lr=lr, clipnorm=0.001)
     train_model.compile(loss=dummy_loss, optimizer=optimizer)             
 
     return train_model, infer_model
@@ -188,7 +191,8 @@ def _main_(args):
         config['valid']['valid_annot_folder'],
         config['valid']['valid_image_folder'],
         config['valid']['cache_name'],
-        config['model']['labels']
+        config['model']['labels'],
+        config['train']['train_val_split']
     )
     print('\nTraining on: \t' + str(labels) + '\n')
 
@@ -283,7 +287,7 @@ def _main_(args):
 
 if __name__ == '__main__':
     argparser = argparse.ArgumentParser(description='train and evaluate YOLO_v3 model on any dataset')
-    argparser.add_argument('-c', '--conf', help='path to configuration file')   
+    argparser.add_argument('-c', '--conf', default='config.json', help='path to configuration file')   
 
     args = argparser.parse_args()
     _main_(args)

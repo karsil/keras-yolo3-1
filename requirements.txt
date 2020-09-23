@@ -22,3 +22,6 @@ termcolor==1.1.0
 tqdm==4.41.1
 Werkzeug==0.16.0
 wrapt==1.11.2
+optuna==2.1.0
+datetime==4.3
+pathlib==1.0.1
