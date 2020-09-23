@@ -29,7 +29,6 @@ def create_optimizer(trial):
         )
         kwargs["decay"] = trial.suggest_float("rms_decay", 0.8, 0.9999)
         kwargs["epsilon"] = trial.suggest_float("rms_epsilon", 1e-12, 1e-7)
-        kwargs["momentum"] = trial.suggest_float("rms_momentum", 0, 1e-1)
     elif optimizer_selected == "SGD":
         kwargs["learning_rate"] = trial.suggest_float(
             "sgd_opt_learning_rate", 1e-9, 1e-1
