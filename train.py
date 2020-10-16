@@ -76,16 +76,16 @@ def create_callbacks(saved_weights_name, tensorboard_logs, model_to_save):
     makedirs(tensorboard_logs)
     
     early_stop = EarlyStopping(
-        monitor     = 'loss', 
+        monitor     = 'val_loss', 
         min_delta   = 0.01, 
-        patience    = 7, 
+        patience    = 5, 
         mode        = 'min', 
         verbose     = 1
     )
     checkpoint = CustomModelCheckpoint(
         model_to_save   = model_to_save,
         filepath        = saved_weights_name,# + '{epoch:02d}.h5', 
-        monitor         = 'loss', 
+        monitor         = 'val_loss', 
         verbose         = 1, 
         save_best_only  = True, 
         mode            = 'min', 
@@ -107,9 +107,9 @@ def create_callbacks(saved_weights_name, tensorboard_logs, model_to_save):
         write_images           = True,
     )    
 
-    nan_cb = tf.keras.callbacks.TerminateOnNaN()
+    nan = tf.keras.callbacks.TerminateOnNaN()
 
-    return [early_stop, checkpoint, reduce_on_plateau, tensorboard, nan_cb]
+    return [early_stop, checkpoint, reduce_on_plateau, tensorboard, nan]
 
 def create_model(
     nb_class, 
