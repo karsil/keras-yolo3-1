@@ -1,8 +1,13 @@
 import cv2
 import numpy as np
 import os
+import csv
 from .bbox import BoundBox, bbox_iou
 from scipy.special import expit
+from tqdm import tqdm
+from itertools import cycle
+from pathlib import Path
+import matplotlib.pyplot as plt
 
 def _sigmoid(x):
     return expit(x)
@@ -14,14 +19,14 @@ def makedirs(path):
         if not os.path.isdir(path):
             raise
 
-def evaluate(model, 
-             generator, 
-             iou_threshold=0.5,
-             obj_thresh=0.5,
-             nms_thresh=0.45,
-             net_h=416,
-             net_w=416,
-             save_path=None):
+
+def get_detections_annotations(
+    model, 
+    generator,
+    obj_thresh=0.5,
+    nms_thresh=0.45,
+    net_h=416,
+    net_w=416):
     """ Evaluate a given dataset using a given model.
     code originally from https://github.com/fizyr/keras-retinanet
 
@@ -41,7 +46,7 @@ def evaluate(model,
     all_detections     = [[None for i in range(generator.num_classes())] for j in range(generator.size())]
     all_annotations    = [[None for i in range(generator.num_classes())] for j in range(generator.size())]
 
-    for i in range(generator.size()):
+    for i in tqdm(range(generator.size())):
         raw_image = [generator.load_image(i)]
 
         # make the boxes and the labels
@@ -53,7 +58,7 @@ def evaluate(model,
         if len(pred_boxes) > 0:
             pred_boxes = np.array([[box.xmin, box.ymin, box.xmax, box.ymax, box.get_score()] for box in pred_boxes]) 
         else:
-            pred_boxes = np.array([[]])  
+            pred_boxes = np.array([[]])
         
         # sort the boxes and the labels according to scores
         score_sort = np.argsort(-score)
@@ -69,22 +74,56 @@ def evaluate(model,
         # copy detections to all_annotations
         for label in range(generator.num_classes()):
             all_annotations[i][label] = annotations[annotations[:, 4] == label, :4].copy()
+    
+    return all_detections, all_annotations
+    
+
+def evaluate(model, 
+             generator, 
+             iou_threshold=0.5,
+             obj_thresh=0.5,
+             nms_thresh=0.45,
+             net_h=416,
+             net_w=416,
+             labels=None,
+             save_path=None):
+    """ Evaluate a given dataset using a given model.
+    code originally from https://github.com/fizyr/keras-retinanet
+
+    # Arguments
+        model           : The model to evaluate.
+        generator       : The generator that represents the dataset to evaluate.
+        iou_threshold   : The threshold used to consider when a detection is positive or negative.
+        obj_thresh      : The threshold used to distinguish between object and non-object
+        nms_thresh      : The threshold used to determine whether two detections are duplicates
+        net_h           : The height of the input image to the model, higher value results in better accuracy
+        net_w           : The width of the input image to the model
+        save_path       : The path to save images with visualized detections to.
+    # Returns
+        A dict mapping class names to mAP scores.
+    """    
+    # gather all detections and annotations
+    all_detections, all_annotations = get_detections_annotations(model, generator, obj_thresh, nms_thresh, net_h, net_w)
 
     # compute mAP by comparing all detections and all annotations
     average_precisions = {}
+    average_f1s = {}
+    amount_detections_per_class = {}
     
     for label in range(generator.num_classes()):
         false_positives = np.zeros((0,))
         true_positives  = np.zeros((0,))
         scores          = np.zeros((0,))
         num_annotations = 0.0
+        class_dir = os.path.join(save_path, labels[label])
+        Path(class_dir).mkdir(parents=True, exist_ok=True)
 
         for i in range(generator.size()):
             detections           = all_detections[i][label]
             annotations          = all_annotations[i][label]
             num_annotations     += annotations.shape[0]
             detected_annotations = []
-
+            
             for d in detections:
                 scores = np.append(scores, d[4])
 
@@ -104,6 +143,8 @@ def evaluate(model,
                 else:
                     false_positives = np.append(false_positives, 1)
                     true_positives  = np.append(true_positives, 0)
+        
+        amount_detections_per_class[label] = num_annotations
 
         # no annotations -> AP for this class is 0 (is this correct?)
         if num_annotations == 0:
@@ -123,11 +164,29 @@ def evaluate(model,
         recall    = true_positives / num_annotations
         precision = true_positives / np.maximum(true_positives + false_positives, np.finfo(np.float64).eps)
 
+        if save_path is not None:
+            log = os.path.join(class_dir, 'precision_recall.csv')
+            with open(log, 'w') as csvfile:
+                filewriter = csv.writer(csvfile)
+                filewriter.writerow(['Precision', 'Recall'])
+                for p, r in zip(precision, recall):
+                    filewriter.writerow([str(p),str(r)])
+
+        # compute f1
+        mean_precision = sum(precision) / len(precision)
+        mean_recall = sum(recall) / len(recall)
+        f1 = 2 * (mean_precision * mean_recall) / (mean_precision + mean_recall)
+        average_f1s[label] = f1
+
         # compute average precision
-        average_precision  = compute_ap(recall, precision)  
+        average_precision  = compute_ap(recall, precision, class_dir)  
         average_precisions[label] = average_precision
 
-    return average_precisions    
+    class_weights = {}
+    for class_id, num_annot in amount_detections_per_class.items():
+        class_weights[class_id] = num_annot / sum(amount_detections_per_class.values())
+
+    return average_precisions, average_f1s, class_weights
 
 def correct_yolo_boxes(boxes, image_h, image_w, net_h, net_w):
     if (float(net_w)/image_w) < (float(net_h)/image_h):
@@ -289,7 +348,22 @@ def compute_overlap(a, b):
 
     return intersection / ua  
     
-def compute_ap(recall, precision):
+def plot_prec_recall_f1_curve(precision, recall, save_path = None):
+    plt.figure()
+    plt.step(recall, precision, where='post')
+
+    plt.xlabel('Recall')
+    plt.ylabel('Precision')
+    plt.ylim([0.0, 1.05])
+    plt.xlim([0.0, 1.0])
+    plt.title('Average precision score')
+
+    path = "curve.png"
+    if save_path is not None:
+        path = os.path.join(save_path, path)
+    plt.savefig(path)
+
+def compute_ap(recall, precision, save_path = None):
     """ Compute the average precision, given the recall and precision curves.
     Code originally from https://github.com/rbgirshick/py-faster-rcnn.
 
@@ -303,6 +377,8 @@ def compute_ap(recall, precision):
     # first append sentinel values at the end
     mrec = np.concatenate(([0.], recall, [1.]))
     mpre = np.concatenate(([0.], precision, [0.]))
+
+    plot_prec_recall_f1_curve(mrec, mpre, save_path)
 
     # compute the precision envelope
     for i in range(mpre.size - 1, 0, -1):

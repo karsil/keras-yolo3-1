@@ -123,7 +123,7 @@ def objective(trial):
         batch_size          = batch_size, 
         warmup_batches      = warmup_batches,
         ignore_thresh       = config['train']['ignore_thresh'],
-        multi_gpu           = 1,
+        multi_gpu           = multi_gpu,
         saved_weights_name  = config['train']['saved_weights_name'],
         lr                  = lr,
         grid_scales         = config['train']['grid_scales'],

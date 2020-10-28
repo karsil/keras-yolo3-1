@@ -4,6 +4,8 @@ import argparse
 import os
 import numpy as np
 import json
+import csv
+from pathlib import Path
 from voc import parse_voc_annotation
 from yolo import create_yolov3_model
 from generator import BatchGenerator
@@ -48,21 +50,55 @@ def _main_(args):
     ###############################
     #   Load the model and do evaluation
     ###############################
-    os.environ['CUDA_VISIBLE_DEVICES'] = config['train']['gpus']
+    #os.environ['CUDA_VISIBLE_DEVICES'] = config['train']['gpus']
+    #model_path = "/home/jsteeg/keras-yolo3-1/studies/20200923-192151-996072/trained_ufo.h5"
+    #infer_model = load_model(model_path)
+    infer_model = load_model(config['train']['saved_weights_name_eval'])
 
-    infer_model = load_model(config['train']['saved_weights_name'])
+    result_dir = config['valid']['result_dir']
 
+    ious = np.arange(0.05, 1, 0.05)
+
+    results = {}
+    for iou in ious:
+        save_path = os.path.join(result_dir, str(iou))
+        Path(save_path).mkdir(parents=True, exist_ok=True)
     # compute mAP for all the classes
-    average_precisions = evaluate(infer_model, valid_generator)
+        average_precisions, average_f1s, class_weights = evaluate(model=infer_model, generator=valid_generator,iou_threshold=iou, labels=labels, save_path=save_path)
 
-    # print the score
-    for label, average_precision in average_precisions.items():
-        print(labels[label] + ': {:.4f}'.format(average_precision))
-    print('mAP: {:.4f}'.format(sum(average_precisions.values()) / len(average_precisions)))           
+        avg_p = 0.0
+        avg_f1 = 0.0
+        for avgP, f1, weight in zip(list(average_precisions.values()), list(average_f1s.values()), list(class_weights.values())):
+            avg_p += weight * avgP
+            avg_f1 += weight * f1     
+
+        results[iou] = {
+            "ap": avg_p,
+            "f1": avg_f1
+        }
+
+    ap_results = os.path.join(result_dir, 'eval_result.csv')
+    with open(ap_results, 'w') as csvfile:
+        filewriter = csv.writer(csvfile)
+        filewriter.writerow(['AP@', 'Score', "f1"])
+
+        for iou, metrics in results.items():
+            print(metrics)
+            i = "{:.2f}".format(iou)
+            ap = "{:.4f}".format(metrics["ap"])
+            f1 = "{:.4f}".format(metrics["f1"])
+            filewriter.writerow([i, ap, f1])
+            print('AP@{:.2f}: {:.4f} - F1: {}'.format(iou, metrics["ap"], metrics["f1"]))
+
+    map_result = os.path.join(result_dir, 'map.txt')
+    map_value = sum([value["ap"] for value in results.values()]) / len(results)
+    with open(map_result, 'w') as map_file:
+        map_file.write("mAP: {:.4f}".format(map_value))
+    print('mAP: {:.4f}'.format(map_value))
 
 if __name__ == '__main__':
     argparser = argparse.ArgumentParser(description='Evaluate YOLO_v3 model on any dataset')
-    argparser.add_argument('-c', '--conf', help='path to configuration file')    
+    argparser.add_argument('-c', '--conf', default='config.json', help='path to configuration file')    
     
     args = argparser.parse_args()
     _main_(args)
