@@ -11,4 +11,5 @@
 .vscode/
 *.db
 *.pkl
-studies/
+studies*/
+*.csv
