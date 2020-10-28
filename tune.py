@@ -163,14 +163,18 @@ def objective(trial):
         print(key, '->', history.history[key])
 
     train_losses = history.history['loss']
+    try:
     val_losses = history.history['val_loss']
+    except KeyError as e:
+        print(e)
+        raise optuna.TrialPruned("Did not finished first epoch, val loss is NaN")
 
     last_lost = -1
     try:
         last_loss = float(train_losses[-1])
     except IndexError as e:
         print(e)
-        raise optuna.TrialPruned("Did not finished first epoch")
+        raise optuna.TrialPruned("Did not finished first epoch, train loss is NaN")
 
     if np.isnan(last_loss):
         print(f"Reached NaN during training after {len(train_losses)} epochs")
@@ -189,7 +193,7 @@ def objective(trial):
         print(f"Last legit epoch: {last_legit_epoch}")
         print(f"Last legit val_loss {last_legit_loss}")
 
-        message = "NaN in epoch " + str(len(train_losses) + 1) + "; best: epoch " + str(last_legit_epoch) + " with val loss" + str(last_legit_loss)
+        message = "NaN in epoch " + str(len(train_losses) + 1) + "; best: epoch " + str(last_legit_epoch) + " with val loss " + str(last_legit_loss)
         raise optuna.TrialPruned(message)
 
     else:
