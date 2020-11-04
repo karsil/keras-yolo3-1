@@ -1,5 +1,6 @@
 from keras.backend import clear_session
 import os
+import time
 import json
 import optuna
 import keras
@@ -225,17 +226,20 @@ def _main_(args):
     print("  Number of complete trials: ", len(complete_trials))
 
     print("Best trial:")
+    for i in range(5):
+        try:
     trial = study.best_trial
+            break
+        except ValueError as e:
+            print(e)
+            print("Retrying to access study in a few moments...")
+            time.sleep(2)
 
     print("  Value: ", trial.value)
 
     print("  Params: ")
     for key, value in trial.params.items():
         print("    {}: {}".format(key, value))
-
-
-    results = study.trials_dataframe()
-    results.to_csv(study_name + ".csv")
 
 
 if __name__ == '__main__':
