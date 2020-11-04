@@ -61,6 +61,8 @@ def _main_(args):
 
     results = {}
     for iou in ious:
+        iou = round(iou, 2)
+        print(f"Processing IoU@{iou}...")
         save_path = os.path.join(result_dir, str(iou))
         Path(save_path).mkdir(parents=True, exist_ok=True)
     # compute mAP for all the classes
@@ -83,12 +85,11 @@ def _main_(args):
         filewriter.writerow(['AP@', 'Score', "f1"])
 
         for iou, metrics in results.items():
-            print(metrics)
             i = "{:.2f}".format(iou)
             ap = "{:.4f}".format(metrics["ap"])
             f1 = "{:.4f}".format(metrics["f1"])
             filewriter.writerow([i, ap, f1])
-            print('AP@{:.2f}: {:.4f} - F1: {}'.format(iou, metrics["ap"], metrics["f1"]))
+            print('AP@{}: {} - F1: {}'.format(i, ap, f1))
 
     map_result = os.path.join(result_dir, 'map.txt')
     map_value = sum([value["ap"] for value in results.values()]) / len(results)
