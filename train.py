@@ -92,14 +92,14 @@ def create_callbacks(saved_weights_name, tensorboard_logs, model_to_save):
         period          = 1
     )
     reduce_on_plateau = ReduceLROnPlateau(
-        monitor  = 'loss',
-        factor   = 0.1,
+        monitor  = 'val_loss',
+        factor   = 0.2,
         patience = 3,
         verbose  = 1,
         mode     = 'min',
         epsilon  = 0.01,
-        cooldown = 0,
-        min_lr   = 0
+        cooldown = 3,
+        min_lr   = 0.0000001
     )
     tensorboard = CustomTensorBoard(
         log_dir                = tensorboard_logs,

@@ -1,23 +1,25 @@
 {
     "model" : {
         "min_input_size":       288,
-        "max_input_size":       448,
-        "anchors":              [55,69, 75,234, 133,240, 136,129, 142,363, 203,290, 228,184, 285,359, 341,260],
-        "labels":               ["kangaroo"]
+        "max_input_size":       640,
+        "anchors":              [14,10, 22,13, 25,19, 33,31, 42,59, 77,84, 78,54, 106,143, 196,151],
+        "labels":               ["fish_clupeidae", "jellyfish_aurelia", "fish_unspecified", "fish_cod", "fish_herring", "jellyfish_unspecified"]
     },
 
     "train": {
-        "train_image_folder":   "/home/andy/Desktop/github/kangaroo/images/",
-        "train_annot_folder":   "/home/andy/Desktop/github/kangaroo/annots/",
-        "cache_name":           "kangaroo_train.pkl",
+        "train_image_folder":   "/home/jsteeg/ufo_data/yolo_no_crop_vc/train/images/",
+        "train_annot_folder":   "/home/jsteeg/ufo_data/yolo_no_crop_vc/train/annotations/",
+        "cache_name":           "ufo_train_data.pkl",
+
+        "train_val_split":      0.8,
 
         "train_times":          8,
-        "batch_size":           16,
+        "batch_size":           4,
         "learning_rate":        1e-4,
-        "nb_epochs":            100,
-        "warmup_epochs":        3,
+        "nb_epochs":            400,
+        "warmup_epochs":        5,
         "ignore_thresh":        0.5,
-        "gpus":                 "0,1",
+        "gpus":                 "0",
 
         "grid_scales":          [1,1,1],
         "obj_scale":            5,
@@ -25,16 +27,18 @@
         "xywh_scale":           1,
         "class_scale":          1,
 
-        "tensorboard_dir":      "logs",
-        "saved_weights_name":   "kangaroo.h5",
+        "tensorboard_dir":      "logs_ufo",
+        "saved_weights_name_eval":   "/home/jsteeg/keras-yolo3-1/studies_14oct/20201016-193435-696961/trained_ufo.h5",
+        "saved_weights_name": "trained_ufo.h5",
         "debug":                true
     },
 
     "valid": {
-        "valid_image_folder":   "",
-        "valid_annot_folder":   "",
-        "cache_name":           "",
+        "valid_image_folder":   "/home/jsteeg/ufo_data/yolo_no_crop_vc/test/images/",
+        "valid_annot_folder":   "/home/jsteeg/ufo_data/yolo_no_crop_vc/test/annotations/",
+        "cache_name":           "ufo_test_data.pkl",
 
-        "valid_times":          1
+        "valid_times":          1,
+        "result_dir":           "/home/jsteeg/keras-yolo3-1/eval_results/"
     }
 }

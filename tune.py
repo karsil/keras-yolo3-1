@@ -136,6 +136,7 @@ def objective(trial):
     )
 
     epochs = config['train']['nb_epochs'] + config['train']['warmup_epochs']
+    print(f"Begin training for {epochs} epochs...")
 
     target_weight = log_dir + config['train']['saved_weights_name']
     tb_dir = log_dir + config['train']['tensorboard_dir']
@@ -207,6 +208,20 @@ def objective(trial):
     print(last_loss)
     return last_loss
 
+def get_best_trial(study: optuna.Study) -> optuna.Trial:
+    success = False
+    for i in range(10):
+        try:
+            trial = study.best_trial
+            success = True
+            break
+        except ValueError as e:
+            print(e)
+            print("Retrying to access study in a few moments...")
+            time.sleep(2)
+
+    return trial if success else None
+
 def _main_(args):
     study = optuna.create_study(
         direction="minimize",
@@ -216,7 +231,7 @@ def _main_(args):
         storage = "sqlite:///" + study_name + ".db",
         load_if_exists = True
     )
-    study.optimize(objective, n_trials=10, timeout=600)
+    study.optimize(objective, n_trials=30)
 
     pruned_trials = [t for t in study.trials if t.state == optuna.trial.TrialState.PRUNED]
     complete_trials = [t for t in study.trials if t.state == optuna.trial.TrialState.COMPLETE]
@@ -225,21 +240,16 @@ def _main_(args):
     print("  Number of pruned trials: ", len(pruned_trials))
     print("  Number of complete trials: ", len(complete_trials))
 
+    trial = get_best_trial(study=study)
+    if trial is not None:
     print("Best trial:")
-    for i in range(5):
-        try:
-    trial = study.best_trial
-            break
-        except ValueError as e:
-            print(e)
-            print("Retrying to access study in a few moments...")
-            time.sleep(2)
-
     print("  Value: ", trial.value)
 
     print("  Params: ")
     for key, value in trial.params.items():
         print("    {}: {}".format(key, value))
+    else:
+        print("Not able to access trial")
 
 
 if __name__ == '__main__':
