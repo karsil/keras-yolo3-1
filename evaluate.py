@@ -55,9 +55,11 @@ def _main_(args):
     #infer_model = load_model(model_path)
     infer_model = load_model(config['train']['saved_weights_name_eval'])
 
-    result_dir = config['valid']['result_dir']
+    result_dir = result_dir = os.path.join(os.path.dirname(config['train']['saved_weights_name_eval']), "eval")
+    if args.dir:
+        result_dir = args.dir
 
-    ious = np.arange(0.05, 1, 0.05)
+    print(f"Saving results to {result_dir}")
 
     results = {}
     for iou in ious:
@@ -104,9 +106,17 @@ def _main_(args):
         map_file.write("mAP: {:.4f}".format(map_value))
     print('mAP: {:.4f}'.format(map_value))
 
+
+def dir_path(path):
+    if os.path.isdir(path):
+        return path
+    else:
+        raise argparse.ArgumentTypeError(f"readable_dir:{path} is not a valid path")
+
+
 if __name__ == '__main__':
     argparser = argparse.ArgumentParser(description='Evaluate YOLO_v3 model on any dataset')
     argparser.add_argument('-c', '--conf', default='config.json', help='path to configuration file')    
-    
+    argparser.add_argument('-d', '--dir', default=None, type=dir_path, help='Path to store results. By default a generic folder beside the weight will be used')
     args = argparser.parse_args()
     _main_(args)
