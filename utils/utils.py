@@ -377,6 +377,7 @@ def plot_prec_recall_f1_curve(precision, recall, save_path = None):
     if save_path is not None:
         path = os.path.join(save_path, path)
     plt.savefig(path)
+    plt.close()
 
 def compute_ap(recall, precision, save_path = None):
     """ Compute the average precision, given the recall and precision curves.
