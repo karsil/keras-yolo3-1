@@ -229,6 +229,10 @@ def _main_(args):
         direction="minimize",
         study_name = study_name,
         sampler = optuna.samplers.TPESampler(),
+        pruner = optuna.pruners.MedianPruner(
+            n_startup_trials=15,
+            n_warmup_steps=10,
+        ),
         storage = "sqlite:///" + storage_path,
         load_if_exists = True
     )
