@@ -223,12 +223,13 @@ def get_best_trial(study: optuna.Study) -> optuna.Trial:
     return trial if success else None
 
 def _main_(args):
+    Path(result_path).mkdir(parents=True, exist_ok=True)
+    storage_path = os.path.join(result_path, study_name + ".db")
     study = optuna.create_study(
         direction="minimize",
         study_name = study_name,
         sampler = optuna.samplers.TPESampler(),
-        pruner = optuna.pruners.MedianPruner(),
-        storage = "sqlite:///" + study_name + ".db",
+        storage = "sqlite:///" + storage_path,
         load_if_exists = True
     )
     study.optimize(objective, n_trials=30)
