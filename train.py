@@ -14,6 +14,7 @@ from callbacks import CustomModelCheckpoint, CustomTensorBoard
 from utils.multi_gpu_model import multi_gpu_model
 import tensorflow as tf
 import keras
+from tqdm.keras import TqdmCallback
 from keras.models import load_model
 
 
@@ -262,6 +263,9 @@ def _main_(args):
     #   Kick off the training
     ###############################
     callbacks = create_callbacks(config['train']['saved_weights_name'], config['train']['tensorboard_dir'], infer_model)
+    callbacks = callbacks + [
+        TqdmCallback(batch_size=config['train']['batch_size'])
+    ]
 
     train_model.fit_generator(
         generator        = train_generator, 

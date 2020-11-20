@@ -146,7 +146,7 @@ def objective(trial):
             trial=trial,
             monitor='val_loss'
         ),
-        TqdmCallback(epochs=epochs, batch_size=batch_size)
+        TqdmCallback(batch_size=batch_size)
     ]
     
     history = train_model.fit_generator(
