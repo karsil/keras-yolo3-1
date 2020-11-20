@@ -70,9 +70,16 @@ def _main_(args):
 
         avg_p = 0.0
         avg_f1 = 0.0
+        
+        # AFAIK, map is calculated with no respect to class sizes
+        use_class_weights = False
+        if use_class_weights:
         for avgP, f1, weight in zip(list(average_precisions.values()), list(average_f1s.values()), list(class_weights.values())):
             avg_p += weight * avgP
             avg_f1 += weight * f1     
+        else:
+            avg_p = np.mean(list(average_precisions.values()))
+            avg_f1 = np.mean(list(average_f1s.values()))
 
         results[iou] = {
             "ap": avg_p,

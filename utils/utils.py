@@ -108,6 +108,7 @@ def evaluate(model,
     # compute mAP by comparing all detections and all annotations
     average_precisions = {}
     average_f1s = {}
+    precisions_recalls = {}
     amount_detections_per_class = {}
     
     for label in range(generator.num_classes()):
@@ -164,6 +165,8 @@ def evaluate(model,
         recall    = true_positives / num_annotations
         precision = true_positives / np.maximum(true_positives + false_positives, np.finfo(np.float64).eps)
 
+        precisions_recalls[label] = [precision, recall]
+
         if save_path is not None:
             log = os.path.join(class_dir, 'precision_recall.csv')
             with open(log, 'w') as csvfile:
@@ -173,13 +176,25 @@ def evaluate(model,
                     filewriter.writerow([str(p),str(r)])
 
         # compute f1
-        mean_precision = sum(precision) / len(precision)
-        mean_recall = sum(recall) / len(recall)
-        f1 = 2 * (mean_precision * mean_recall) / (mean_precision + mean_recall)
+        if len(precision) == 0:
+            print("Set precision to 0.0, as no TP exists")
+            mean_precision = 0.0
+        else:
+            mean_precision = np.mean(precision)
+
+        if len(recall) == 0:
+            mean_recall = 0.0
+        else:
+            mean_recall = np.mean(recall)
+
+        if mean_precision == 0.0 or mean_recall == 0.0:
+            f1 = 0
+        else:
+            f1 = 2.0 * (mean_precision * mean_recall) / (mean_precision + mean_recall)
         average_f1s[label] = f1
 
         # compute average precision
-        average_precision  = compute_ap(recall, precision, class_dir)  
+        average_precision  = compute_ap(recall, precision, save_path)  
         average_precisions[label] = average_precision
 
     class_weights = {}
