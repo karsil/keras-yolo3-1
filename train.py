@@ -16,6 +16,7 @@ import tensorflow as tf
 import keras
 from tqdm.keras import TqdmCallback
 from keras.models import load_model
+import logging
 
 
 config = tf.compat.v1.ConfigProto(
@@ -181,6 +182,7 @@ def create_model(
 
 def _main_(args):
     config_path = args.conf
+    logging.info("Loading config")
 
     with open(config_path) as config_buffer:    
         config = json.loads(config_buffer.read())
@@ -188,6 +190,8 @@ def _main_(args):
     ###############################
     #   Parse the annotations 
     ###############################
+    logging.info("Create training instances")
+
     train_ints, valid_ints, labels, max_box_per_image = create_training_instances(
         config['train']['train_annot_folder'],
         config['train']['train_image_folder'],
@@ -203,6 +207,7 @@ def _main_(args):
     ###############################
     #   Create the generators 
     ###############################    
+    logging.info("Create training generator")    
     train_generator = BatchGenerator(
         instances           = train_ints, 
         anchors             = config['model']['anchors'],   
@@ -216,7 +221,7 @@ def _main_(args):
         jitter              = 0.3, 
         norm                = normalize
     )
-    
+    logging.info("Create validation generator")
     valid_generator = BatchGenerator(
         instances           = valid_ints, 
         anchors             = config['model']['anchors'],   
@@ -241,6 +246,7 @@ def _main_(args):
     os.environ['CUDA_VISIBLE_DEVICES'] = config['train']['gpus']
     multi_gpu = len(config['train']['gpus'].split(','))
 
+    logging.info("Create model")
     train_model, infer_model = create_model(
         nb_class            = len(labels), 
         anchors             = config['model']['anchors'], 
@@ -266,7 +272,7 @@ def _main_(args):
     callbacks = callbacks + [
         TqdmCallback(batch_size=config['train']['batch_size'])
     ]
-
+    logging.info("Start training")
     train_model.fit_generator(
         generator        = train_generator, 
         steps_per_epoch  = len(train_generator) * config['train']['train_times'], 
@@ -284,6 +290,7 @@ def _main_(args):
     ###############################
     #   Run the evaluation
     ###############################   
+    logging.info("Start evaluation")
     # compute mAP for all the classes
     average_precisions = evaluate(infer_model, valid_generator)
 
@@ -293,6 +300,7 @@ def _main_(args):
     print('mAP: {:.4f}'.format(sum(average_precisions.values()) / len(average_precisions)))           
 
 if __name__ == '__main__':
+    logging.basicConfig(filename='train.log', level=logging.DEBUG)
     argparser = argparse.ArgumentParser(description='train and evaluate YOLO_v3 model on any dataset')
     argparser.add_argument('-c', '--conf', default='config.json', help='path to configuration file')   
 

@@ -8,6 +8,7 @@ from tqdm import tqdm
 from itertools import cycle
 from pathlib import Path
 import matplotlib.pyplot as plt
+import logging
 
 def _sigmoid(x):
     return expit(x)
@@ -204,21 +205,51 @@ def evaluate(model,
     return average_precisions, average_f1s, class_weights
 
 def correct_yolo_boxes(boxes, image_h, image_w, net_h, net_w):
+    logging.info("Entering 'correct_yolo_boxes'")
     if (float(net_w)/image_w) < (float(net_h)/image_h):
+        logging.info(f"(float({net_h})/{image_w}) < (float({net_h})/{image_h}): True")
+        logging.info(f"Setting new_w = {net_w}")
         new_w = net_w
+        logging.info(f"Setting new_h = ({image_h} * {new_w}) / {image_w} = {(image_h*net_w)/image_w}")
         new_h = (image_h*net_w)/image_w
     else:
+        logging.info(f"(float({net_h})/{image_w}) < (float({net_h})/{image_h}): False")
+        logging.info(f"Setting new_w = {net_w}")
         new_h = net_w
+        logging.info(f"Setting new_w = ({image_w} * {net_h}) / {image_h} = {(image_w*net_h)/image_h}")
         new_w = (image_w*net_h)/image_h
         
     for i in range(len(boxes)):
-        x_offset, x_scale = (net_w - new_w)/2./net_w, float(new_w)/net_w
-        y_offset, y_scale = (net_h - new_h)/2./net_h, float(new_h)/net_h
+        logging.info(f"Setting x_offset = {new_w} = ({net_w} - {new_w})/2./{net_w} = ({net_w - net_w})/2./{net_w} = {(net_w - new_w)/2./net_w}")
+        x_offset = (net_w - new_w)/2./net_w
+
+        logging.info(f"Setting x_scale = float({new_w})/{net_w} = {float(new_w)/net_w}")
+        x_scale = float(new_w)/net_w
+
+        logging.info(f"Setting y_offset = ({net_h} - {new_h})/2./{net_h} = ({net_h - new_h})/2./{net_h} = {(net_h - new_h)/2./net_h}")
+        y_offset = (net_h - new_h)/2./net_h
+
+        logging.info(f"Setting y_scale = float({new_h})/{net_h} = {float(new_h)/net_h}")
+        y_scale = float(new_h)/net_h
+        logging.info(f"Setting xmin = ({boxes[i].xmin} - {x_offset}) =  {(boxes[i].xmin - x_offset)}")
+        xmin = (boxes[i].xmin - x_offset)
+        logging.info(f"Setting boxes[i].xmin = int({xmin} / {x_scale} * {image_w}) = int({xmin / x_scale * image_w}) =  {int(xmin / x_scale * image_w)}")
+        boxes[i].xmin = int(xmin / x_scale * image_w)
+
+        logging.info(f"Setting xmax = ({boxes[i].xmax} - {x_offset}) =  {(boxes[i].xmax - x_offset)}")
+        xmax = (boxes[i].xmax - x_offset)
+        logging.info(f"Setting boxes[i].xmax = int({xmax} / {x_scale} * {image_w}) = int({xmax / x_scale * image_w}) =  {int(xmax / x_scale * image_w)}")
+        boxes[i].xmax = int(xmax / x_scale * image_w)
+
+        logging.info(f"Setting ymin = ({boxes[i].ymin} - {y_offset}) =  {(boxes[i].ymin - y_offset)}")
+        ymin = (boxes[i].ymin - y_offset)
+        logging.info(f"Setting boxes[i].ymin = int({ymin} / {y_scale} * {image_h}) = int({ymin / y_scale * image_h}) =  {int(ymin / y_scale * image_h)}")
+        boxes[i].ymin = int(ymin / y_scale * image_h)
         
-        boxes[i].xmin = int((boxes[i].xmin - x_offset) / x_scale * image_w)
-        boxes[i].xmax = int((boxes[i].xmax - x_offset) / x_scale * image_w)
-        boxes[i].ymin = int((boxes[i].ymin - y_offset) / y_scale * image_h)
-        boxes[i].ymax = int((boxes[i].ymax - y_offset) / y_scale * image_h)
+        logging.info(f"Setting ymax = ({boxes[i].ymax} - {y_offset}) =  {(boxes[i].ymax - y_offset)}")
+        ymax = (boxes[i].ymax - y_offset)
+        logging.info(f"Setting boxes[i].ymax = int({ymax} / {y_scale} * {image_h}) = int({ymax / y_scale * image_h}) =  {int(ymax / y_scale * image_h)}")
+        boxes[i].ymax = int(ymax / y_scale * image_h)
         
 def do_nms(boxes, nms_thresh):
     if len(boxes) > 0:
