@@ -279,6 +279,7 @@ def _main_(args):
         epochs           = config['train']['nb_epochs'] + config['train']['warmup_epochs'], 
         verbose          = 2 if config['train']['debug'] else 1,
         callbacks        = callbacks, 
+        validation_data  = valid_generator,
         workers          = 4,
         max_queue_size   = 8
     )
