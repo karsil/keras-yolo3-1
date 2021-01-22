@@ -1,24 +1,33 @@
 #! /usr/bin/env python
 
+import tensorflow as tf
 import os
+from pathlib import Path
 import argparse
 import json
 import cv2
 from utils.utils import get_yolo_boxes, makedirs
-from utils.bbox import draw_boxes
+from utils.bbox import draw_boxes, write_detection_results
 from keras.models import load_model
-from tqdm import tqdm
+from tqdm.auto import tqdm
 import numpy as np
 
 def _main_(args):
-    config_path  = args.conf
-    input_path   = args.input
-    output_path  = args.output
+    config_path  = Path(args.conf)
+    input_path   = Path(args.input)
+    output_path  = Path(args.output)
+
+    assert config_path.exists() and input_path.exists()
 
     with open(config_path) as config_buffer:    
         config = json.load(config_buffer)
 
     makedirs(output_path)
+    if not args.text_only:
+        image_output_path = output_path.joinpath('images')
+        if not image_output_path.exists(): image_output_path.mkdir()
+    text_output_path = output_path.joinpath('detections')
+    if not text_output_path.exists(): text_output_path.mkdir()
 
     ###############################
     #   Set some parameter
@@ -35,7 +44,7 @@ def _main_(args):
     ###############################
     #   Predict bounding boxes 
     ###############################
-    if 'webcam' in input_path: # do detection on the first webcam
+    if 'webcam' in str(input_path): # do detection on the first webcam
         video_reader = cv2.VideoCapture(0)
 
         # the main loop
@@ -55,15 +64,15 @@ def _main_(args):
             if cv2.waitKey(1) == 27: 
                 break  # esc to quit
         cv2.destroyAllWindows()        
-    elif input_path[-4:] == '.mp4': # do detection on a video  
-        video_out = output_path + input_path.split('/')[-1]
+    elif input_path.suffix == '.mp4': # do detection on a video  
+        video_out = image_output_path.joinpath(input_path.name)
         video_reader = cv2.VideoCapture(input_path)
 
         nb_frames = int(video_reader.get(cv2.CAP_PROP_FRAME_COUNT))
         frame_h = int(video_reader.get(cv2.CAP_PROP_FRAME_HEIGHT))
         frame_w = int(video_reader.get(cv2.CAP_PROP_FRAME_WIDTH))
 
-        video_writer = cv2.VideoWriter(video_out,
+        video_writer = cv2.VideoWriter(str(video_out),
                                cv2.VideoWriter_fourcc(*'MPEG'), 
                                50.0, 
                                (frame_w, frame_h))
@@ -100,33 +109,50 @@ def _main_(args):
     else: # do detection on an image or a set of images
         image_paths = []
 
-        if os.path.isdir(input_path): 
-            for inp_file in os.listdir(input_path):
-                image_paths += [input_path + inp_file]
+        # read all images in given folder
+        if input_path.is_dir(): 
+            for inp_file in input_path.glob('*.*'):
+                image_paths += [inp_file]
+        # read image paths from a file list
+        elif input_path.suffix == '.txt':
+            for img_path in  input_path.read_text().splitlines():
+                img_path = Path(img_path)
+                # works with relative and absolute paths
+                if not img_path.is_absolute():
+                    img_path = input_path.parent.joinpath(img_path)
+
+                assert img_path.exists(), f"{img_path}"
+                image_paths += [img_path]
+        # use a single image
         else:
             image_paths += [input_path]
 
-        image_paths = [inp_file for inp_file in image_paths if (inp_file[-4:] in ['.jpg', '.png', 'JPEG'])]
+        image_paths = [inp_file for inp_file in image_paths if (inp_file.suffix in ['.jpg', '.png', 'JPEG'])]
 
         # the main loop
-        for image_path in image_paths:
-            image = cv2.imread(image_path)
-            print(image_path)
+        for image_path in tqdm(image_paths):
+            
+            image = cv2.imread(str(image_path))
 
             # predict the bounding boxes
             boxes = get_yolo_boxes(infer_model, [image], net_h, net_w, config['model']['anchors'], obj_thresh, nms_thresh)[0]
 
             # draw bounding boxes on the image using labels
-            draw_boxes(image, boxes, config['model']['labels'], obj_thresh) 
-     
+            labels = sorted(config['model']['labels'])
+
+            write_detection_results(boxes, labels, txt_output_file=str(text_output_path.joinpath(Path(image_path).stem+'.txt')))
+
             # write the image with bounding boxes to file
-            cv2.imwrite(output_path + image_path.split('/')[-1], np.uint8(image))         
+            if not args.text_only:
+                draw_boxes(image, boxes, labels, obj_thresh) 
+                cv2.imwrite(str(image_output_path.joinpath(image_path.name)), np.uint8(image))         
 
 if __name__ == '__main__':
     argparser = argparse.ArgumentParser(description='Predict with a trained yolo model')
     argparser.add_argument('-c', '--conf', help='path to configuration file')
-    argparser.add_argument('-i', '--input', help='path to an image, a directory of images, a video, or webcam')    
-    argparser.add_argument('-o', '--output', default='output/', help='path to output directory')   
+    argparser.add_argument('-i', '--input', help='path to a single image, a directory of images, a text file of image paths, a video or webcam')    
+    argparser.add_argument('-o', '--output', default='output/', help='path to output directory')
+    argparser.add_argument('--text_only', action='store_true', help='only output the result-coordinates in text files (no images).')      
     
     args = argparser.parse_args()
     _main_(args)
