@@ -16,6 +16,9 @@ class BoundBox:
         self.label = -1
         self.score = -1
 
+    def __str__(self):
+        return f"{self.get_label()} {self.get_score()} {self.xmin} {self.ymin} {self.xmax} {self.ymax}"
+
     def get_label(self):
         if self.label == -1:
             self.label = np.argmax(self.classes)
@@ -55,6 +58,16 @@ def bbox_iou(box1, box2):
     union = w1*h1 + w2*h2 - intersect
     
     return float(intersect) / union
+
+def write_detection_results(boxes, labels, txt_output_file):
+   # print('=====')
+    for box in boxes:
+        
+        if box.get_score() > 0.0:
+            with open(txt_output_file, 'a') as outfile:
+                outfile.write(f"{labels[box.get_label()]} {box.get_score()} {box.xmin} {box.ymin} {box.xmax} {box.ymax}\n")   
+        #else:
+         #   print(f"ZERO SCORE: {box.classes}")
 
 def draw_boxes(image, boxes, labels, obj_thresh, quiet=True):
     for box in boxes:
