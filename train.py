@@ -131,6 +131,7 @@ def create_model(
     optimizer = None
 ):
     if multi_gpu > 1:
+        logging.info(f"Create model for {multi_gpu} gpus")
         with tf.device('/cpu:0'):
             template_model, infer_model = create_yolov3_model(
                 nb_class            = nb_class, 
@@ -164,9 +165,10 @@ def create_model(
 
     # load the pretrained weight if exists, otherwise load the backend weight only
     if os.path.exists(saved_weights_name): 
-        print("\nLoading pretrained weights.\n")
+        logging.info("Loading pretrained weights.")
         template_model.load_weights(saved_weights_name)
     else:
+        logging.info("Loading default backend weights.")
         template_model.load_weights("backend.h5", by_name=True)       
 
     if multi_gpu > 1:

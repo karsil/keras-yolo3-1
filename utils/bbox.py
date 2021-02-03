@@ -2,9 +2,11 @@ import numpy as np
 import os
 import cv2
 from .colors import get_color
+import logging
 
 class BoundBox:
     def __init__(self, xmin, ymin, xmax, ymax, c = None, classes = None):
+        logging.debug(f"Create BoundBox - xmin: {xmin}, ymin: {ymin}, xmax: {xmax}, ymax: {ymax}, c: {c}, classes: {classes}")
         self.xmin = xmin
         self.ymin = ymin
         self.xmax = xmax

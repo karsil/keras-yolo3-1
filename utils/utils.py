@@ -205,50 +205,52 @@ def evaluate(model,
     return average_precisions, average_f1s, class_weights
 
 def correct_yolo_boxes(boxes, image_h, image_w, net_h, net_w):
-    logging.info("Entering 'correct_yolo_boxes'")
+    logging.debug("Entering 'correct_yolo_boxes'")
     if (float(net_w)/image_w) < (float(net_h)/image_h):
-        logging.info(f"(float({net_h})/{image_w}) < (float({net_h})/{image_h}): True")
-        logging.info(f"Setting new_w = {net_w}")
+        logging.debug(f"(float({net_h})/{image_w}) < (float({net_h})/{image_h}): True")
+        logging.debug(f"Setting new_w = {net_w}")
         new_w = net_w
-        logging.info(f"Setting new_h = ({image_h} * {new_w}) / {image_w} = {(image_h*net_w)/image_w}")
+        logging.debug(f"Setting new_h = ({image_h} * {new_w}) / {image_w} = {(image_h*net_w)/image_w}")
         new_h = (image_h*net_w)/image_w
     else:
-        logging.info(f"(float({net_h})/{image_w}) < (float({net_h})/{image_h}): False")
-        logging.info(f"Setting new_w = {net_w}")
+        logging.debug(f"(float({net_h})/{image_w}) < (float({net_h})/{image_h}): False")
+        logging.debug(f"Setting new_w = {net_w}")
         new_h = net_w
-        logging.info(f"Setting new_w = ({image_w} * {net_h}) / {image_h} = {(image_w*net_h)/image_h}")
+        logging.debug(f"Setting new_w = ({image_w} * {net_h}) / {image_h} = {(image_w*net_h)/image_h}")
         new_w = (image_w*net_h)/image_h
         
     for i in range(len(boxes)):
-        logging.info(f"Setting x_offset = {new_w} = ({net_w} - {new_w})/2./{net_w} = ({net_w - net_w})/2./{net_w} = {(net_w - new_w)/2./net_w}")
+        logging.debug(f"Setting x_offset = {new_w} = ({net_w} - {new_w})/2./{net_w} = ({net_w - net_w})/2./{net_w} = {(net_w - new_w)/2./net_w}")
         x_offset = (net_w - new_w)/2./net_w
 
-        logging.info(f"Setting x_scale = float({new_w})/{net_w} = {float(new_w)/net_w}")
+        logging.debug(f"Setting x_scale = float({new_w})/{net_w} = {float(new_w)/net_w}")
         x_scale = float(new_w)/net_w
 
-        logging.info(f"Setting y_offset = ({net_h} - {new_h})/2./{net_h} = ({net_h - new_h})/2./{net_h} = {(net_h - new_h)/2./net_h}")
+        logging.debug(f"Setting y_offset = ({net_h} - {new_h})/2./{net_h} = ({net_h - new_h})/2./{net_h} = {(net_h - new_h)/2./net_h}")
         y_offset = (net_h - new_h)/2./net_h
 
-        logging.info(f"Setting y_scale = float({new_h})/{net_h} = {float(new_h)/net_h}")
+        logging.debug(f"Setting y_scale = float({new_h})/{net_h} = {float(new_h)/net_h}")
         y_scale = float(new_h)/net_h
-        logging.info(f"Setting xmin = ({boxes[i].xmin} - {x_offset}) =  {(boxes[i].xmin - x_offset)}")
+
+        logging.debug(f"Box {i}: {boxes[i]}")
+        logging.debug(f"Setting xmin = ({boxes[i].xmin} - {x_offset}) =  {(boxes[i].xmin - x_offset)}")
         xmin = (boxes[i].xmin - x_offset)
-        logging.info(f"Setting boxes[i].xmin = int({xmin} / {x_scale} * {image_w}) = int({xmin / x_scale * image_w}) =  {int(xmin / x_scale * image_w)}")
+        logging.debug(f"Setting boxes[i].xmin = int({xmin} / {x_scale} * {image_w}) = int({xmin / x_scale * image_w}) =  {int(xmin / x_scale * image_w)}")
         boxes[i].xmin = int(xmin / x_scale * image_w)
 
-        logging.info(f"Setting xmax = ({boxes[i].xmax} - {x_offset}) =  {(boxes[i].xmax - x_offset)}")
+        logging.debug(f"Setting xmax = ({boxes[i].xmax} - {x_offset}) =  {(boxes[i].xmax - x_offset)}")
         xmax = (boxes[i].xmax - x_offset)
-        logging.info(f"Setting boxes[i].xmax = int({xmax} / {x_scale} * {image_w}) = int({xmax / x_scale * image_w}) =  {int(xmax / x_scale * image_w)}")
+        logging.debug(f"Setting boxes[i].xmax = int({xmax} / {x_scale} * {image_w}) = int({xmax / x_scale * image_w}) =  {int(xmax / x_scale * image_w)}")
         boxes[i].xmax = int(xmax / x_scale * image_w)
 
-        logging.info(f"Setting ymin = ({boxes[i].ymin} - {y_offset}) =  {(boxes[i].ymin - y_offset)}")
+        logging.debug(f"Setting ymin = ({boxes[i].ymin} - {y_offset}) =  {(boxes[i].ymin - y_offset)}")
         ymin = (boxes[i].ymin - y_offset)
-        logging.info(f"Setting boxes[i].ymin = int({ymin} / {y_scale} * {image_h}) = int({ymin / y_scale * image_h}) =  {int(ymin / y_scale * image_h)}")
+        logging.debug(f"Setting boxes[i].ymin = int({ymin} / {y_scale} * {image_h}) = int({ymin / y_scale * image_h}) =  {int(ymin / y_scale * image_h)}")
         boxes[i].ymin = int(ymin / y_scale * image_h)
         
-        logging.info(f"Setting ymax = ({boxes[i].ymax} - {y_offset}) =  {(boxes[i].ymax - y_offset)}")
+        logging.debug(f"Setting ymax = ({boxes[i].ymax} - {y_offset}) =  {(boxes[i].ymax - y_offset)}")
         ymax = (boxes[i].ymax - y_offset)
-        logging.info(f"Setting boxes[i].ymax = int({ymax} / {y_scale} * {image_h}) = int({ymax / y_scale * image_h}) =  {int(ymax / y_scale * image_h)}")
+        logging.debug(f"Setting boxes[i].ymax = int({ymax} / {y_scale} * {image_h}) = int({ymax / y_scale * image_h}) =  {int(ymax / y_scale * image_h)}")
         boxes[i].ymax = int(ymax / y_scale * image_h)
         
 def do_nms(boxes, nms_thresh):
@@ -304,7 +306,10 @@ def decode_netout(netout, anchors, obj_thresh, net_h, net_w):
             
             # last elements are class probabilities
             classes = netout[row,col,b,5:]
-            
+            logging.debug(f"bbox 1st parameter: x-w/2 = {x} - {w}/2 = {x-w/2}")
+            logging.debug(f"bbox 2nd parameter: y-h/2 = {y} - {h}/2 = {y-h/2}")
+            logging.debug(f"bbox 3rd parameter: x+w/2 = {x} + {w}/2 = {x+w/2}")
+            logging.debug(f"bbox 4th parameter: y+h/2 = {y} + {h}/2 = {y+h/2}")
             box = BoundBox(x-w/2, y-h/2, x+w/2, y+h/2, objectness, classes)
 
             boxes.append(box)

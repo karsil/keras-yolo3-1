@@ -30,6 +30,7 @@
         "tensorboard_dir":      "logs_ufo",
         "saved_weights_name_eval":   "/home/jsteeg/keras-yolo3-1/studies_14oct/20201016-193435-696961/trained_ufo.h5",
         "saved_weights_name": "trained_ufo.h5",
+        "result_dir":           "training_results",
         "debug":                true
     },
 
