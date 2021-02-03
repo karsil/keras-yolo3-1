@@ -13,7 +13,8 @@ from datetime import datetime
 from pathlib import Path
 import numpy as np
 
-study_name = "14oct"
+now = datetime.now()
+study_name = now.strftime("%Y-%m-%d_%H:%M:%S")
 result_path = "studies_" + study_name
 config = None
 
