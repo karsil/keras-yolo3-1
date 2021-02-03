@@ -59,6 +59,8 @@ def _main_(args):
     if args.dir:
         result_dir = args.dir
 
+    ious = np.arange(0.05, 1, 0.05)
+    #ious = np.arange(0.7, 1, 0.1)
     print(f"Saving results to {result_dir}")
 
     results = {}
@@ -67,7 +69,7 @@ def _main_(args):
         print(f"Processing IoU@{iou}...")
         save_path = os.path.join(result_dir, str(iou))
         Path(save_path).mkdir(parents=True, exist_ok=True)
-    # compute mAP for all the classes
+        # compute mAP for all the classes
         average_precisions, average_f1s, class_weights = evaluate(model=infer_model, generator=valid_generator,iou_threshold=iou, labels=labels, save_path=save_path)
 
         avg_p = 0.0
@@ -76,9 +78,9 @@ def _main_(args):
         # AFAIK, map is calculated with no respect to class sizes
         use_class_weights = False
         if use_class_weights:
-        for avgP, f1, weight in zip(list(average_precisions.values()), list(average_f1s.values()), list(class_weights.values())):
-            avg_p += weight * avgP
-            avg_f1 += weight * f1     
+            for avgP, f1, weight in zip(list(average_precisions.values()), list(average_f1s.values()), list(class_weights.values())):
+                avg_p += weight * avgP
+                avg_f1 += weight * f1
         else:
             avg_p = np.mean(list(average_precisions.values()))
             avg_f1 = np.mean(list(average_f1s.values()))
@@ -105,7 +107,7 @@ def _main_(args):
     with open(map_result, 'w') as map_file:
         map_file.write("mAP: {:.4f}".format(map_value))
     print('mAP: {:.4f}'.format(map_value))
-
+        
 
 def dir_path(path):
     if os.path.isdir(path):
@@ -116,7 +118,7 @@ def dir_path(path):
 
 if __name__ == '__main__':
     argparser = argparse.ArgumentParser(description='Evaluate YOLO_v3 model on any dataset')
-    argparser.add_argument('-c', '--conf', default='config.json', help='path to configuration file')    
+    argparser.add_argument('-c', '--conf', default='config.json', help='path to configuration file')
     argparser.add_argument('-d', '--dir', default=None, type=dir_path, help='Path to store results. By default a generic folder beside the weight will be used')
     args = argparser.parse_args()
     _main_(args)
