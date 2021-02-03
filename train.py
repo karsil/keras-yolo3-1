@@ -17,6 +17,7 @@ import keras
 from tqdm.keras import TqdmCallback
 from keras.models import load_model
 import logging
+import shutil
 
 
 config = tf.compat.v1.ConfigProto(
@@ -295,12 +296,36 @@ def _main_(args):
     ###############################   
     logging.info("Start evaluation")
     # compute mAP for all the classes
-    average_precisions = evaluate(infer_model, valid_generator)
+    average_precisions, _, _ = evaluate(
+        model=infer_model, 
+        generator=valid_generator,
+        labels=labels,
+        save_path=config['train']['result_dir']
+        )
 
     # print the score
     for label, average_precision in average_precisions.items():
         print(labels[label] + ': {:.4f}'.format(average_precision))
     print('mAP: {:.4f}'.format(sum(average_precisions.values()) / len(average_precisions)))           
+
+    src_dir = os.path.abspath(config['train']['saved_weights_name'])
+    target_dir = os.path.join(
+        os.getcwd(),
+        config['train']['result_dir'],
+        config['train']['saved_weights_name']
+    )
+    print(f"Moving weights from {src_dir} to {target_dir}")
+    shutil.move(src_dir,target_dir)
+
+    src_dir = os.path.abspath(config['train']['tensorboard_dir'])
+    target_dir = os.path.join(
+        os.getcwd(),
+        config['train']['result_dir'],
+        config['train']['tensorboard_dir']
+    )
+    print(f"Moving logs from {src_dir} to {target_dir}")
+    shutil.move(src_dir,target_dir)
+
 
 if __name__ == '__main__':
     logging.basicConfig(filename='train.log', level=logging.DEBUG)
