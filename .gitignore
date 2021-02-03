@@ -14,3 +14,5 @@
 studies*/
 *.csv
 eval_results/
+tmp_*/
+logs*/
