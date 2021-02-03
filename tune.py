@@ -159,29 +159,46 @@ def objective(trial):
         workers          = 1,
         max_queue_size   = 8
     )
+    logfile_path = log_dir + "log.txt"
+    log = open(logfile_path, "w")
+
 
     print(f"Study: {log_dir}")
+    log.write(f"Study: {log_dir}\n")
     for key in history.history.keys():
         print(key, '->', history.history[key])
+        log.write(f"{key} -> {history.history[key]}\n")
 
     train_losses = history.history['loss']
     try:
     val_losses = history.history['val_loss']
     except KeyError as e:
         print(e)
-        raise optuna.TrialPruned("Did not finished first epoch, val loss is NaN")
+        m = "Did not finished first epoch, val loss is NaN"
+        log.write(m + "\n")
+        raise optuna.TrialPruned(m)
 
     last_lost = -1
     try:
         last_loss = float(train_losses[-1])
     except IndexError as e:
         print(e)
-        raise optuna.TrialPruned("Did not finished first epoch, train loss is NaN")
+        m = "Did not finished first epoch, train loss is NaN"
+        log.write(m + "\n")
+        raise optuna.TrialPruned(m)
 
-    if np.isnan(last_loss):
-        print(f"Reached NaN during training after {len(train_losses)} epochs")
         last_legit_epoch = -1
         last_legit_loss = -1
+    if np.isnan(last_loss):
+        m = f"Reached NaN during training after {len(train_losses)} epochs"
+        log.write(m + "\n")
+        print(m)
+        log.write("epoch: train, test\n")
+        for i,l in enumerate(zip(history.history['loss'], history.history['val_loss'])):
+            content = "{}: {}\n".format(str(i + 1), l)
+            log.write(content)
+
+
         print("train losses:", train_losses)
         print("val loses:", val_losses)
         try:
@@ -190,23 +207,27 @@ def objective(trial):
                     last_legit_epoch = i + 1
                     last_legit_loss = l
         except IndexError as e:
-            print("Did not finished first epoch for evaluation")
+            m = "Did not finished first epoch for evaluation"
+            log.write(m)
+            print(m)
         
         print(f"Last legit epoch: {last_legit_epoch}")
         print(f"Last legit val_loss {last_legit_loss}")
 
         message = "NaN in epoch " + str(len(train_losses) + 1) + "; best: epoch " + str(last_legit_epoch) + " with val loss " + str(last_legit_loss)
+        log.write(message)
+        log.close()
         raise optuna.TrialPruned(message)
 
     else:
-        filepath = log_dir + "losses.txt"
-        with open(filepath, "w") as loss_file: 
-            loss_file.write("epoch: train, test\n")
+        log.write("epoch: train, test\n")
             for i,l in enumerate(zip(history.history['loss'], history.history['val_loss'])):
                 content = "{}: {}\n".format(str(i + 1), l)
-                loss_file.write(content)
+            log.write(content)
     print(last_loss)
-    return last_loss
+        log.close()
+        return last_legit_loss
+
 
 def get_best_trial(study: optuna.Study) -> optuna.Trial:
     success = False
