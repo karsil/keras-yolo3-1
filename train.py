@@ -83,7 +83,8 @@ def create_callbacks(saved_weights_name, tensorboard_logs, model_to_save):
         min_delta   = 0.01, 
         patience    = 5, 
         mode        = 'min', 
-        verbose     = 1
+        verbose     = 1,
+        restore_best_weights=True
     )
     checkpoint = CustomModelCheckpoint(
         model_to_save   = model_to_save,
