@@ -120,11 +120,11 @@ def validate(config, weights_path: str, dataset_file: str, output_dir: str, save
 
     #os.environ['CUDA_VISIBLE_DEVICES'] = config['train']['gpus']
     model = load_model(weights_path)
-    
+
     for l in tqdm(lines):
         filepath, annots = parse_from_yolo(line=l)
         assert filepath.is_file()
-        logging.info(filepath)
+
         # handle groundtruth
         parse_and_store_groundtruth(target_dir=gt_dir, image_path=filepath, annotations=annots)
 
@@ -146,17 +146,13 @@ def validate(config, weights_path: str, dataset_file: str, output_dir: str, save
             cv2.imwrite(img_out, np.uint8(img))
 
 
-
-
-
 def main(args):
     config = setup(args)
 
     weights_path = "/home/jsteeg/keras-yolo3-1/training_02_21/trained_ufo.h5"
     dataset_file = "/home/jsteeg/ufo_data/yolo_no_crop/test_dataset.txt"
     output_dir = "tmp_validate_results"
-    save_output = False
-    #model = DetectorTF2(model_path, label_map, class_id=id_list, threshold=threshold)
+    save_output = True
     validate(config=config, weights_path=weights_path, dataset_file=dataset_file, output_dir=output_dir, save_output=save_output)
 
 
