@@ -117,8 +117,6 @@ def evaluate(model,
         true_positives  = np.zeros((0,))
         scores          = np.zeros((0,))
         num_annotations = 0.0
-        class_dir = os.path.join(save_path, labels[label])
-        Path(class_dir).mkdir(parents=True, exist_ok=True)
 
         for i in range(generator.size()):
             detections           = all_detections[i][label]
@@ -168,7 +166,9 @@ def evaluate(model,
 
         precisions_recalls[label] = [precision, recall]
 
-        if save_path is not None:
+        if save_path and labels:
+            class_dir = os.path.join(save_path, labels[label])
+            Path(class_dir).mkdir(parents=True, exist_ok=True)
             log = os.path.join(class_dir, 'precision_recall.csv')
             with open(log, 'w') as csvfile:
                 filewriter = csv.writer(csvfile)
