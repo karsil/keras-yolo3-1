@@ -21,6 +21,7 @@ import shutil
 
 
 config = tf.compat.v1.ConfigProto(
+    allow_soft_placement=True,
     gpu_options = tf.compat.v1.GPUOptions(per_process_gpu_memory_fraction=0.9)
     # device_count = {'GPU': 1}
 )
