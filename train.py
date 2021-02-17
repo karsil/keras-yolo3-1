@@ -180,9 +180,11 @@ def create_model(
     if os.path.exists(saved_weights_name): 
         logging.info("Loading pretrained weights.")
         template_model.load_weights(saved_weights_name)
-    else:
+    elif os.path.exists("backend.h5"):
         logging.info("Loading default backend weights.")
         template_model.load_weights("backend.h5", by_name=True)       
+    else:
+        logging.info("Training from scratch")
 
     if multi_gpu > 1:
         train_model = multi_gpu_model(template_model, gpus=multi_gpu)
