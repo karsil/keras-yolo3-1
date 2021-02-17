@@ -10,7 +10,7 @@ from generator import BatchGenerator
 from utils.utils import normalize, evaluate, makedirs
 from keras.callbacks import EarlyStopping, ReduceLROnPlateau
 from keras.optimizers import Adam
-from callbacks import CustomModelCheckpoint, CustomTensorBoard
+from callbacks import CustomModelCheckpoint, CustomTensorBoard, LRTensorBoard
 from utils.multi_gpu_model import multi_gpu_model
 import tensorflow as tf
 import keras
@@ -74,19 +74,21 @@ def create_training_instances(
 
     max_box_per_image = max([len(inst['object']) for inst in (train_ints + valid_ints)])
 
-    return train_ints, valid_ints, sorted(labels), max_box_per_image
+    return train_ints, valid_ints, labels, max_box_per_image
 
 def create_callbacks(saved_weights_name, tensorboard_logs, model_to_save):
     makedirs(tensorboard_logs)
     
+    logging.debug("Adding callback (Early Stopping)")
     early_stop = EarlyStopping(
         monitor     = 'val_loss', 
-        min_delta   = 0.01, 
-        patience    = 5, 
+        min_delta   = 0.1, 
+        patience    = 8, 
         mode        = 'min', 
         verbose     = 1,
         restore_best_weights=True
     )
+    logging.debug("Adding callback (CustomModelCheckpoint)")
     checkpoint = CustomModelCheckpoint(
         model_to_save   = model_to_save,
         filepath        = saved_weights_name,# + '{epoch:02d}.h5', 
@@ -96,25 +98,33 @@ def create_callbacks(saved_weights_name, tensorboard_logs, model_to_save):
         mode            = 'min', 
         period          = 1
     )
+    logging.debug("Adding callback (ReduceLROnPlateau)")
     reduce_on_plateau = ReduceLROnPlateau(
         monitor  = 'val_loss',
         factor   = 0.2,
-        patience = 3,
+        patience = 5,
         verbose  = 1,
         mode     = 'min',
         epsilon  = 0.01,
         cooldown = 3,
-        min_lr   = 0.0000001
+        min_lr   = 0.0
     )
+    logging.debug("Adding callback (CustomTensorBoard)")
     tensorboard = CustomTensorBoard(
         log_dir                = tensorboard_logs,
         write_graph            = True,
         write_images           = True,
     )    
 
+    logging.debug("Adding callback (TerminateOnNaN)")
     nan = tf.keras.callbacks.TerminateOnNaN()
 
-    return [early_stop, checkpoint, reduce_on_plateau, tensorboard, nan]
+    logging.debug("Adding callback (LRTensorBoard)")
+    lr = LRTensorBoard(
+        log_dir=tensorboard_logs
+    )
+
+    return [early_stop, checkpoint, reduce_on_plateau, tensorboard, nan, lr]
 
 def create_model(
     nb_class, 
@@ -273,11 +283,12 @@ def _main_(args):
     ###############################
     #   Kick off the training
     ###############################
+    logging.info("Creating callbacks...")
     callbacks = create_callbacks(config['train']['saved_weights_name'], config['train']['tensorboard_dir'], infer_model)
     callbacks = callbacks + [
         TqdmCallback(batch_size=config['train']['batch_size'])
     ]
-    logging.info("Start training")
+    logging.info("Start training...")
     train_model.fit_generator(
         generator        = train_generator, 
         steps_per_epoch  = len(train_generator) * config['train']['train_times'], 
@@ -330,7 +341,8 @@ def _main_(args):
 
 
 if __name__ == '__main__':
-    logging.basicConfig(filename='train.log', level=logging.DEBUG)
+    #logging.basicConfig(filename='train.log', level=logging.INFO)
+    logging.basicConfig(level=logging.INFO)
     argparser = argparse.ArgumentParser(description='train and evaluate YOLO_v3 model on any dataset')
     argparser.add_argument('-c', '--conf', default='config.json', help='path to configuration file')   
 

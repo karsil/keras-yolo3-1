@@ -2,6 +2,18 @@ from keras.callbacks import TensorBoard, ModelCheckpoint
 import tensorflow as tf
 import numpy as np
 import warnings
+from keras import backend as K
+
+
+class LRTensorBoard(TensorBoard):
+    def __init__(self, log_dir, **kwargs):  # add other arguments to __init__ if you need
+        super().__init__(log_dir=log_dir, **kwargs)
+
+    def on_epoch_end(self, epoch, logs=None):
+        logs = logs or {}
+        logs.update({'lr': K.eval(self.model.optimizer.lr)})
+        super().on_epoch_end(epoch, logs)
+
 
 class CustomTensorBoard(TensorBoard):
     """ to log the loss after each batch
